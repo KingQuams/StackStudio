@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#080d1b" />
+<title>Stack Studio — Undo / Redo Visualizer</title>
+<style>
+:root{--bg:#080d1b;--panel:#10182b;--panel2:#121e35;--line:rgba(151,177,220,.15);--text:#edf4ff;--muted:#91a2c2;--blue:#6c8cff;--cyan:#43e1d1;--pink:#ff77b7;--green:#68edb0;--shadow:0 24px 70px rgba(0,0,0,.25)}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 12% 0%,rgba(61,92,190,.20),transparent 36%),radial-gradient(ellipse at 90% 20%,rgba(28,187,181,.10),transparent 30%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+button,textarea{font:inherit}
+button{cursor:pointer}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.app{max-width:1400px;margin:auto;padding:28px clamp(16px,3vw,42px) 38px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--blue),#6b54d9);box-shadow:0 8px 30px #506bdf40;font-size:22px}
+.brand h1{font-size:17px;letter-spacing:.02em;margin:0}.brand p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pill{border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px;color:var(--muted);background:#ffffff05;display:flex;gap:7px;align-items:center}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #68edb080}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:24px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.17em;color:var(--cyan);font-weight:750}.hero h2{font-size:clamp(27px,4vw,43px);letter-spacing:-.045em;line-height:1.08;margin:9px 0 10px}.hero h2 span{background:linear-gradient(100deg,#fff 5%,#9db4ff 55%,#53e6d6);-webkit-background-clip:text;background-clip:text;color:transparent}.hero p{max-width:620px;color:var(--muted);line-height:1.65;font-size:14px;margin:0}.hero-stat{min-width:150px;text-align:right}.hero-stat strong{font-size:28px;display:block;letter-spacing:-.04em}.hero-stat small{color:var(--muted);font-size:11px}
+.layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);gap:18px;align-items:start}
+.panel{background:linear-gradient(160deg,rgba(20,31,54,.96),rgba(13,21,38,.97));border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:19px 21px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px}.panel-title{font-size:13px;font-weight:750;letter-spacing:.01em}.panel-sub{font-size:11px;color:var(--muted);margin-top:4px}.tag{font-size:10px;text-transform:uppercase;letter-spacing:.12em;padding:6px 9px;border-radius:7px;background:#6c8cff16;color:#9fb2ff;border:1px solid #6c8cff2b}
+.editor-body{padding:0 21px 21px}.editor-tools{display:flex;align-items:center;justify-content:space-between;margin:3px 0 10px;color:var(--muted);font-size:11px;gap:10px}.live-label{display:flex;align-items:center;gap:7px}.tiny-dot{width:6px;height:6px;background:var(--cyan);border-radius:50%}
+textarea{resize:vertical;width:100%;min-height:250px;background:#080f20;border:1px solid #263655;border-radius:13px;padding:18px;color:#eaf1ff;line-height:1.8;font-size:14px;letter-spacing:.01em;transition:border-color .2s,box-shadow .2s;box-shadow:inset 0 2px 14px #0002}textarea:focus{border-color:#718cff;box-shadow:0 0 0 4px #6c8cff18,inset 0 2px 14px #0002}textarea::placeholder{color:#586b8e}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--text);font-size:12px;font-weight:700;background:#ffffff08;transition:transform .18s,border-color .18s,background .18s,box-shadow .18s}.btn:hover:not(:disabled){transform:translateY(-2px);border-color:#7d97ff80;background:#ffffff10}.btn:active:not(:disabled){transform:scale(.97)}.btn:disabled{opacity:.35;cursor:not-allowed}.btn.primary{background:linear-gradient(110deg,#607dff,#7662ee);border-color:transparent;box-shadow:0 8px 24px #5268dd32}.btn.primary:hover:not(:disabled){box-shadow:0 10px 30px #5268dd55}.btn.cyan{color:#8ef4e8;border-color:#43e1d133;background:#43e1d10c}.btn.ghost{padding:8px 10px;font-size:11px}
+.kbd{font-size:10px;color:#9aabd0;background:#ffffff0b;border:1px solid #ffffff13;border-radius:5px;padding:2px 5px;font-weight:500}
+.divider{height:1px;background:var(--line);margin:18px 0}.editor-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--muted);font-size:11px}.editor-foot strong{color:#e2eaff;font-weight:650}
+.stack-section{padding:0 18px 18px}.stack-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stack-card{border:1px solid var(--line);background:#080f20a8;border-radius:15px;min-width:0;overflow:hidden;transition:border-color .3s,box-shadow .3s}.stack-card.flash-undo{border-color:#6c8cff99;box-shadow:0 0 0 3px #6c8cff12,0 0 26px #6c8cff13}.stack-card.flash-redo{border-color:#43e1d199;box-shadow:0 0 0 3px #43e1d112,0 0 26px #43e1d112}.stack-head{padding:13px 13px 11px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}.stack-name{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:750}.stack-icon{width:27px;height:27px;border-radius:8px;display:grid;place-items:center;background:#6c8cff18;color:#a9b9ff}.redo .stack-icon{background:#43e1d118;color:#70eadf}.count{font-size:10px;color:var(--muted);background:#ffffff08;border:1px solid var(--line);border-radius:7px;padding:4px 7px}.stack-items{padding:11px;min-height:245px;display:flex;flex-direction:column-reverse;gap:8px;justify-content:flex-start}.stack-empty{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#7183a5;gap:8px;font-size:11px;line-height:1.5}.empty-symbol{width:39px;height:39px;border:1px dashed #506181;border-radius:12px;display:grid;place-items:center;font-size:17px;color:#6c80a5}.state-item{position:relative;min-width:0;padding:10px 10px 9px;border-radius:10px;background:linear-gradient(120deg,#192744,#121d32);border:1px solid #2a3c5d;animation:cardIn .34s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom;overflow:hidden}.state-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue)}.redo .state-item::before{background:var(--cyan)}.state-item.top-item{border-color:#738dff75;background:linear-gradient(120deg,#202e50,#151f38);box-shadow:0 5px 18px #00015}.redo .state-item.top-item{border-color:#43e1d155}.state-meta{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:6px}.state-label{font-size:9px;color:#a7b7da;font-weight:750;text-transform:uppercase;letter-spacing:.1em}.top-label{font-size:8px;color:#b9c7ff;background:#6c8cff20;border-radius:4px;padding:3px 5px;white-space:nowrap}.redo .top-label{color:#91f2e8;background:#43e1d11b}.state-text{font-size:10px;line-height:1.45;color:#c5d2eb;white-space:pre-wrap;overflow-wrap:anywhere;max-height:43px;overflow:hidden}.stack-foot{font-size:9px;color:#7083a7;padding:0 12px 12px}.activity{margin-top:18px}.activity-list{padding:0 18px 15px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}.activity-row{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:10px;background:#ffffff04;animation:fadeUp .28s ease both}.activity-symbol{width:25px;height:25px;flex:0 0 25px;display:grid;place-items:center;border-radius:8px;font-size:12px;background:#6c8cff18;color:#9fb3ff}.activity-symbol.redo{background:#43e1d118;color:#78eee3}.activity-copy{min-width:0;flex:1}.activity-copy strong{display:block;font-size:11px;font-weight:700}.activity-copy span{display:block;color:var(--muted);font-size:10px;margin-top:3px;line-height:1.4}.activity-time{font-size:9px;color:#6f83a7;white-space:nowrap}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.mini-panel{padding:18px 20px}.mini-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.mini-head h3{font-size:12px;margin:0}.mini-head span{font-size:10px;color:var(--muted)}.how-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.how-step{border:1px solid var(--line);border-radius:11px;padding:11px 10px;background:#ffffff04}.step-num{font-size:10px;color:var(--cyan);font-weight:800}.how-step strong{display:block;font-size:11px;margin:7px 0 4px}.how-step p{font-size:10px;color:var(--muted);line-height:1.45;margin:0}.complexity{display:flex;gap:10px;flex-wrap:wrap}.metric{flex:1;min-width:95px;background:#ffffff05;border:1px solid var(--line);padding:12px;border-radius:11px}.metric strong{display:block;font-size:19px;color:#a9baff}.metric span{display:block;font-size:10px;color:var(--muted);margin-top:4px}
+.toast{position:fixed;right:22px;bottom:22px;z-index:10;max-width:min(360px,calc(100vw - 32px));padding:13px 16px;border-radius:12px;background:#172641;border:1px solid #506b9b;color:#edf4ff;box-shadow:0 15px 50px #0007;display:flex;align-items:center;gap:10px;font-size:12px;opacity:0;transform:translateY(18px) scale(.97);pointer-events:none;transition:opacity .24s,transform .24s}.toast.show{opacity:1;transform:translateY(0) scale(1)}.toast-mark{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;background:#43e1d11b;color:var(--cyan)}
+.overlay{position:fixed;inset:0;background:#030712bd;backdrop-filter:blur(8px);z-index:20;display:none;place-items:center;padding:20px}.overlay.open{display:grid;animation:fadeIn .2s ease}.modal{width:min(520px,100%);background:#111b30;border:1px solid #314363;border-radius:18px;padding:24px;box-shadow:0 30px 90px #0008;animation:modalIn .3s cubic-bezier(.2,.8,.2,1)}.modal h3{margin:0 0 8px;font-size:19px}.modal p{color:var(--muted);font-size:12px;line-height:1.6}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+@keyframes cardIn{0%{opacity:0;transform:translateY(14px) scale(.96)}70%{transform:translateY(-2px) scale(1.005)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes transferFlash{0%{filter:brightness(1)}45%{filter:brightness(1.7)}100%{filter:brightness(1)}}
+.transfer-flash{animation:transferFlash .55s ease}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.hero-stat{display:none}.bottom-grid{grid-template-columns:1fr}.stack-items{min-height:180px}.stack-empty{min-height:155px}}
+@media(max-width:520px){.app{padding:18px 12px 28px}.topbar{align-items:flex-start;margin-bottom:23px}.top-right .pill:last-child{display:none}.hero h2{font-size:31px}.panel-head{padding:16px 15px 12px}.editor-body{padding:0 14px 15px}.stack-section{padding:0 12px 12px}.stack-grid{gap:8px}.stack-head{padding:10px 9px}.stack-items{padding:8px;min-height:160px}.stack-empty{min-height:135px}.state-item{padding:8px}.stack-name{font-size:11px}.how-list{grid-template-columns:1fr}.how-step{display:grid;grid-template-columns:26px 1fr;column-gap:7px}.how-step strong{margin:0 0 4px}.how-step p{grid-column:2}.toolbar .btn{flex:1}.toolbar .btn.ghost{flex:0 0 auto}.editor-foot{align-items:flex-start;flex-direction:column}.activity-list{padding:0 12px 12px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">⧉</div><div><h1>STACK STUDIO</h1><p>Data structures, made visible</p></div></div>
+    <div class="top-right"><div class="pill"><span class="dot"></span> SYSTEM ONLINE</div><div class="pill">HTML · CSS · JS</div></div>
+  </header>
+
+  <section class="hero">
+    <div><div class="eyebrow">Interactive learning lab / 01</div><h2>Every action has a <span>memory.</span></h2><p>Explore how a stack powers Undo and Redo. Edit the text, reverse your changes, and watch each saved state move through the stack with animated feedback.</p></div>
+    <div class="hero-stat"><strong id="totalOps">00</strong><small>OPERATIONS THIS SESSION</small></div>
+  </section>
+
+  <main class="layout">
+    <section>
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Live text editor</div><div class="panel-sub">Make a change to create a history snapshot.</div></div><span class="tag">EDITOR</span></div>
+        <div class="editor-body">
+          <div class="editor-tools"><span class="live-label"><span class="tiny-dot"></span> LIVE DOCUMENT</span><span id="charCount">0 characters</span></div>
+          <textarea id="editor" spellcheck="true" aria-label="Text editor" placeholder="Start typing something memorable…">Welcome to Stack Studio.
+Every change can be undone.
+Try editing this text, then press Undo.</textarea>
+          <div class="toolbar">
+            <button class="btn" id="undoBtn" title="Undo (Ctrl/Cmd+Z)" disabled>↶ Undo <span class="kbd">Ctrl Z</span></button>
+            <button class="btn primary" id="redoBtn" title="Redo (Ctrl/Cmd+Shift+Z)" disabled>↷ Redo <span class="kbd">Ctrl ⇧ Z</span></button>
+            <button class="btn ghost" id="sampleBtn" title="Load a sample">✦ Sample</button>
+            <button class="btn ghost" id="clearBtn" title="Clear editor">⌫ Clear</button>
+          </div>
+          <div class="divider"></div>
+          <div class="editor-foot"><span>Current state <strong id="stateLabel">#01 · Original</strong></span><span><span id="undoCount">0</span> undoable · <span id="redoCount">0</span> redoable</span></div>
+        </div>
+      </div>
+
+      <div class="panel activity">
+        <div class="panel-head"><div><div class="panel-title">Operation timeline</div><div class="panel-sub">A live log of stack activity.</div></div><button class="btn ghost" id="clearLogBtn">Clear log</button></div>
+        <div class="activity-list" id="activityList" aria-live="polite">
+          <div class="activity-row"><div class="activity-symbol">✦</div><div class="activity-copy"><strong>Session initialized</strong><span>Your current document is ready. Make an edit to begin.</span></div><div class="activity-time">NOW</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Stack visualizer</div><div class="panel-sub">Newest item sits at the top of each stack.</div></div><span class="tag">LIFO</span></div>
+        <div class="stack-section">
+          <div class="stack-grid">
+            <div class="stack-card" id="undoPanel">
+              <div class="stack-head"><div class="stack-name"><span class="stack-icon">↶</span> Undo stack</div><span class="count" id="undoBadge">0 items</span></div>
+              <div class="stack-items" id="undoStack"></div><div class="stack-foot">POP NEXT · Previous states</div>
+            </div>
+            <div class="stack-card redo" id="redoPanel">
+              <div class="stack-head"><div class="stack-name"><span class="stack-icon">↷</span> Redo stack</div><span class="count" id="redoBadge">0 items</span></div>
+              <div class="stack-items" id="redoStack"></div><div class="stack-foot">POP NEXT · Undone states</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:18px">
+        <div class="panel-head"><div><div class="panel-title">How the stack thinks</div><div class="panel-sub">The rule behind every move.</div></div><span class="tag">LIFO RULE</span></div>
+        <div class="stack-section">
+          <div class="how-list">
+            <div class="how-step"><span class="step-num">01</span><div><strong>Push</strong><p>Save the current state on top of Undo.</p></div></div>
+            <div class="how-step"><span class="step-num">02</span><div><strong>Pop</strong><p>Remove the latest state to restore it.</p></div></div>
+            <div class="how-step"><span class="step-num">03</span><div><strong>Transfer</strong><p>Move the current state to the opposite stack.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="bottom-grid">
+    <section class="panel mini-panel"><div class="mini-head"><h3>Complexity snapshot</h3><span>Typical stack operations</span></div><div class="complexity"><div class="metric"><strong>O(1)</strong><span>Push / Pop</span></div><div class="metric"><strong>LIFO</strong><span>Order of access</span></div><div class="metric"><strong>2</strong><span>History stacks</span></div></div></section>
+    <section class="panel mini-panel"><div class="mini-head"><h3>Quick keyboard guide</h3><span>Work faster</span></div><div style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)"><span><span class="kbd">Ctrl / ⌘</span> + <span class="kbd">Z</span> Undo</span><span><span class="kbd">Ctrl</span> + <span class="kbd">Y</span> Redo</span><span><span class="kbd">Ctrl / ⌘</span> + <span class="kbd">Shift</span> + <span class="kbd">Z</span> Redo</span></div><p style="font-size:10px;color:var(--muted);line-height:1.5;margin:12px 0 0">A fresh edit after Undo clears the Redo stack because the history has branched.</p></section>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><span class="toast-mark">✓</span><span id="toastText">Done</span></div>
+<div class="overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal"><h3 id="modalTitle">Clear the editor?</h3><p>This will create a new edit state. You can undo it afterward.</p><div class="modal-actions"><button class="btn" id="cancelClear">Cancel</button><button class="btn primary" id="confirmClear">Clear text</button></div></div>
+</div>
+<script>
+(() => {
+  const editor = document.getElementById('editor');
+  const undoStack = [];
+  const redoStack = [];
+  const $ = id => document.getElementById(id);
+  let currentText = editor.value;
+  let isRestoring = false;
+  let pendingEdit = null;
+  let operationCount = 0;
+  let stateNumber = 1;
+  let toastTimer = null;
+  let activityItems = 1;
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const shortText = value => {
+    const clean = value.replace(/\s+/g, ' ').trim();
+    return clean ? (clean.length > 100 ? clean.slice(0, 100) + '…' : clean) : '(empty document)';
+  };
+  const showToast = message => {
+    $('toastText').textContent = message;
+    $('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2300);
+  };
+  const addLog = (title, detail, kind='normal') => {
+    const row = document.createElement('div');
+    row.className = 'activity-row';
+    const symbol = document.createElement('div');
+    symbol.className = 'activity-symbol' + (kind === 'redo' ? ' redo' : '');
+    symbol.textContent = kind === 'undo' ? '↶' : kind === 'redo' ? '↷' : kind === 'push' ? '＋' : '✦';
+    const copy = document.createElement('div');
+    copy.className = 'activity-copy';
+    const strong = document.createElement('strong'); strong.textContent = title;
+    const span = document.createElement('span'); span.textContent = detail;
+    copy.append(strong, span);
+    const time = document.createElement('div'); time.className = 'activity-time'; time.textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    row.append(symbol, copy, time);
+    $('activityList').prepend(row);
+    while ($('activityList').children.length > 12) $('activityList').lastElementChild.remove();
+  };
+  const animatePanel = (which) => {
+    const panel = $(which === 'undo' ? 'undoPanel' : 'redoPanel');
+    panel.classList.remove('flash-undo','flash-redo');
+    void panel.offsetWidth;
+    panel.classList.add(which === 'undo' ? 'flash-undo' : 'flash-redo');
+    setTimeout(() => panel.classList.remove('flash-undo','flash-redo'), 650);
+  };
+  const renderStack = (id, values, type) => {
+    const container = $(id);
+    container.replaceChildren();
+    if (!values.length) {
+      const empty = document.createElement('div'); empty.className = 'stack-empty';
+      const icon = document.createElement('div'); icon.className = 'empty-symbol'; icon.textContent = type === 'undo' ? '↶' : '↷';
+      const text = document.createElement('div'); text.textContent = type === 'undo' ? 'No previous states yet.' : 'Nothing waiting to be restored.';
+      const hint = document.createElement('div'); hint.textContent = type === 'undo' ? 'Edit text to push a state.' : 'Undo an edit to create a redo state.';
+      empty.append(icon, text, hint); container.append(empty); return;
+    }
+    values.forEach((value, index) => {
+      const item = document.createElement('div');
+      item.className = 'state-item' + (index === values.length - 1 ? ' top-item' : '');
+      const meta = document.createElement('div'); meta.className = 'state-meta';
+      const label = document.createElement('span'); label.className = 'state-label'; label.textContent = `STATE ${values.length - index}`;
+      meta.append(label);
+      if (index === values.length - 1) { const top = document.createElement('span'); top.className = 'top-label'; top.textContent = 'TOP · NEXT OUT'; meta.append(top); }
+      const content = document.createElement('div'); content.className = 'state-text'; content.textContent = shortText(value);
+      item.append(meta, content);
+      item.title = value || '(empty document)';
+      container.append(item);
+    });
+  };
+  const render = () => {
+    $('undoBtn').disabled = undoStack.length === 0;
+    $('redoBtn').disabled = redoStack.length === 0;
+    $('undoCount').textContent = undoStack.length;
+    $('redoCount').textContent = redoStack.length;
+    $('undoBadge').textContent = `${undoStack.length} ${undoStack.length === 1 ? 'item' : 'items'}`;
+    $('redoBadge').textContent = `${redoStack.length} ${redoStack.length === 1 ? 'item' : 'items'}`;
+    $('charCount').textContent = `${editor.value.length.toLocaleString()} characters`;
+    $('totalOps').textContent = String(operationCount).padStart(2, '0');
+    $('stateLabel').textContent = `#${String(stateNumber).padStart(2,'0')} · ${editor.value.trim() ? 'Saved state' : 'Empty state'}`;
+    renderStack('undoStack', undoStack, 'undo');
+    renderStack('redoStack', redoStack, 'redo');
+  };
+  const commitEdit = (nextText, description='Text edited') => {
+    if (nextText === currentText) return;
+    undoStack.push(currentText);
+    currentText = nextText;
+    if (redoStack.length) {
+      const count = redoStack.length;
+      redoStack.length = 0;
+      addLog('Redo history cleared', `${count} future state${count===1?'':'s'} removed after a new edit.`);
+    }
+    stateNumber++;
+    operationCount++;
+    render();
+    animatePanel('undo');
+    addLog('Push → Undo stack', `${description}. Saved: “${shortText(undoStack[undoStack.length-1])}”`, 'push');
+  };
+  const flushPendingEdit = () => {
+    if (pendingEdit) {
+      clearTimeout(pendingEdit);
+      pendingEdit = null;
+      commitEdit(editor.value, 'Text edit saved');
+    }
+  };
+  editor.addEventListener('input', () => {
+    if (isRestoring) return;
+    clearTimeout(pendingEdit);
+    // Group rapid keystrokes into a single history state.
+    pendingEdit = setTimeout(flushPendingEdit, 450);
+    $('charCount').textContent = `${editor.value.length.toLocaleString()} characters`;
+  });
+  editor.addEventListener('blur', flushPendingEdit);
+
+  const undo = () => {
+    flushPendingEdit();
+    if (!undoStack.length) { showToast('Nothing to undo'); return; }
+    const previous = undoStack.pop();
+    redoStack.push(currentText);
+    currentText = previous;
+    isRestoring = true; editor.value = currentText; isRestoring = false;
+    stateNumber++; operationCount++;
+    render(); animatePanel('undo'); animatePanel('redo');
+    addLog('Undo · Pop', 'Restored the previous text state and pushed the current state to Redo.', 'undo');
+    showToast('Undo complete — previous state restored');
+  };
+  const redo = () => {
+    flushPendingEdit();
+    if (!redoStack.length) { showToast('Nothing to redo'); return; }
+    const next = redoStack.pop();
+    undoStack.push(currentText);
+    currentText = next;
+    isRestoring = true; editor.value = currentText; isRestoring = false;
+    stateNumber++; operationCount++;
+    render(); animatePanel('redo'); animatePanel('undo');
+    addLog('Redo · Pop', 'Restored the next state and pushed the current state to Undo.', 'redo');
+    showToast('Redo complete — state restored');
+  };
+  $('undoBtn').addEventListener('click', undo);
+  $('redoBtn').addEventListener('click', redo);
+  $('sampleBtn').addEventListener('click', () => {
+    flushPendingEdit();
+    const sample = 'Stacks are useful because they follow LIFO: Last In, First Out.\\n\\nPush adds an item to the top. Pop removes the most recent item.\\n\\nThis editor uses two stacks to make Undo and Redo possible.';
+    commitEdit(sample, 'Loaded sample text');
+    editor.value = currentText;
+    render();
+    showToast('Sample loaded — history snapshot saved');
+  });
+  $('clearBtn').addEventListener('click', () => $('confirmOverlay').classList.add('open'));
+  $('cancelClear').addEventListener('click', () => $('confirmOverlay').classList.remove('open'));
+  $('confirmClear').addEventListener('click', () => {
+    flushPendingEdit();
+    $('confirmOverlay').classList.remove('open');
+    commitEdit('', 'Cleared the document');
+    editor.value = currentText; render(); showToast('Document cleared — you can undo this');
+  });
+  $('confirmOverlay').addEventListener('click', e => { if (e.target === $('confirmOverlay')) $('confirmOverlay').classList.remove('open'); });
+  $('clearLogBtn').addEventListener('click', () => { $('activityList').replaceChildren(); addLog('Activity log cleared', 'New operations will appear here.'); });
+  document.addEventListener('keydown', e => {
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const mod = mac ? e.metaKey : e.ctrlKey;
+    if (mod && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+    } else if (mod && e.key.toLowerCase() === 'y') {
+      e.preventDefault(); redo();
+    } else if (e.key === 'Escape') {
+      $('confirmOverlay').classList.remove('open');
+    }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
